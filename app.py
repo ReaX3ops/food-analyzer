@@ -4,7 +4,7 @@ from PIL import Image
 import json
 
 st.set_page_config(
-    page_title="Food Analyzer",
+    page_title="SnackScan",
     page_icon="🍱",
     layout="centered"
 )
@@ -13,126 +13,71 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
-* {
-    font-family: 'Outfit', sans-serif;
-}
+* { font-family: 'Outfit', sans-serif; }
 
-/* Animated gradient background */
 .stApp {
     background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
     min-height: 100vh;
 }
 
-/* Hide default streamlit elements */
-#MainMenu, footer, header {visibility: hidden;}
-.block-container {
-    padding-top: 2rem;
-    max-width: 680px;
-}
+#MainMenu, footer, header { visibility: hidden; }
+.block-container { padding-top: 2rem; max-width: 700px; }
 
-/* Hero header glass card */
 .hero-card {
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(255,255,255,0.07);
     backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255,255,255,0.15);
     border-radius: 24px;
-    padding: 2rem 2.5rem;
+    padding: 1.8rem 2.5rem;
     text-align: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
     box-shadow: 0 8px 32px rgba(0,0,0,0.3);
 }
-
 .hero-title {
-    font-size: 2.4rem;
+    font-size: 2.2rem;
     font-weight: 700;
     background: linear-gradient(135deg, #f8f8f8, #a78bfa, #60a5fa);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin: 0;
-    letter-spacing: -0.5px;
 }
-
 .hero-sub {
-    color: rgba(255,255,255,0.5);
-    font-size: 0.95rem;
-    margin-top: 0.4rem;
+    color: rgba(255,255,255,0.45);
+    font-size: 0.92rem;
+    margin-top: 0.3rem;
     font-weight: 300;
 }
 
-/* Upload area styling */
-.stFileUploader {
-    background: rgba(255,255,255,0.05) !important;
-    border-radius: 20px !important;
-    border: 2px dashed rgba(167, 139, 250, 0.4) !important;
-    padding: 1rem !important;
-}
-
-.stFileUploader label {
-    color: rgba(255,255,255,0.7) !important;
-    font-family: 'Outfit', sans-serif !important;
-}
-
-[data-testid="stFileUploadDropzone"] {
-    background: rgba(255,255,255,0.03) !important;
-    border: none !important;
-    border-radius: 14px !important;
-}
-
-[data-testid="stFileUploadDropzone"] p {
-    color: rgba(255,255,255,0.5) !important;
-}
-
-/* Image display */
-[data-testid="stImage"] img {
-    border-radius: 20px !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
-}
-
-/* Result cards */
-.result-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
 .glass-card {
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(255,255,255,0.07);
     backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 20px;
-    padding: 1.5rem 2rem;
+    padding: 1.4rem 1.8rem;
+    margin-bottom: 1rem;
     box-shadow: 0 4px 24px rgba(0,0,0,0.25);
 }
-
 .label {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 500;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: rgba(167, 139, 250, 0.8);
+    color: rgba(167,139,250,0.8);
     margin-bottom: 0.3rem;
 }
-
 .food-name {
-    font-size: 2rem;
+    font-size: 1.9rem;
     font-weight: 700;
     color: #f8f8f8;
-    line-height: 1.2;
 }
-
 .calories-value {
-    font-size: 2rem;
+    font-size: 1.9rem;
     font-weight: 700;
     color: #34d399;
 }
-
 .calories-unit {
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: rgba(255,255,255,0.4);
     font-weight: 300;
     margin-left: 4px;
@@ -140,43 +85,96 @@ st.markdown("""
 
 .ingredient-tag {
     display: inline-block;
-    background: rgba(167, 139, 250, 0.15);
-    border: 1px solid rgba(167, 139, 250, 0.3);
+    background: rgba(167,139,250,0.15);
+    border: 1px solid rgba(167,139,250,0.3);
     border-radius: 50px;
     padding: 5px 16px;
     margin: 4px;
     font-size: 0.88rem;
     color: rgba(255,255,255,0.85);
-    font-weight: 400;
 }
 
-/* Spinner */
-.stSpinner > div {
-    border-top-color: #a78bfa !important;
+.nutrition-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin-top: 0.6rem;
+}
+.nutrition-item {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 0.9rem 0.5rem;
+    text-align: center;
+}
+.nutrition-icon { font-size: 1.4rem; }
+.nutrition-name {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 0.2rem;
+}
+.nutrition-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f8f8f8;
+    margin-top: 0.1rem;
 }
 
-/* Divider */
-hr {
-    border-color: rgba(255,255,255,0.08) !important;
+[data-testid="stFileUploadDropzone"] {
+    background: rgba(255,255,255,0.03) !important;
+    border: 2px dashed rgba(167,139,250,0.4) !important;
+    border-radius: 16px !important;
+}
+[data-testid="stFileUploadDropzone"] p { color: rgba(255,255,255,0.45) !important; }
+
+[data-testid="stImage"] img {
+    border-radius: 20px !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
 }
 
-/* Error */
+.stButton > button {
+    background: rgba(167,139,250,0.2) !important;
+    border: 1px solid rgba(167,139,250,0.4) !important;
+    color: white !important;
+    border-radius: 50px !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.85rem !important;
+}
+.stButton > button:hover {
+    background: rgba(167,139,250,0.35) !important;
+}
+
 .stAlert {
-    background: rgba(239, 68, 68, 0.1) !important;
-    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    background: rgba(239,68,68,0.1) !important;
+    border: 1px solid rgba(239,68,68,0.3) !important;
     border-radius: 14px !important;
     color: #fca5a5 !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# Hero header
-st.markdown("""
+if "lang" not in st.session_state:
+    st.session_state.lang = "en"
+
+def t(en, km):
+    return km if st.session_state.lang == "km" else en
+
+st.markdown(f"""
 <div class="hero-card">
-    <div class="hero-title">🍱 Food Analyzer</div>
-    <div class="hero-sub">Upload a photo — get food name, calories & ingredients instantly</div>
+    <div class="hero-title">🍱 SnackScan</div>
+    <div class="hero-sub">{t("Upload a photo — get food name, calories & nutrition instantly",
+                             "បង្ហោះរូបភាព — ទទួលបានឈ្មោះម្ហូប កាឡូរី និងជីវជាតិភ្លាមៗ")}</div>
 </div>
 """, unsafe_allow_html=True)
+
+col1, col2 = st.columns([6, 1])
+with col2:
+    if st.button("🇰🇭 KM" if st.session_state.lang == "en" else "🇬🇧 EN"):
+        st.session_state.lang = "km" if st.session_state.lang == "en" else "en"
+        st.rerun()
 
 @st.cache_resource
 def get_client():
@@ -184,24 +182,42 @@ def get_client():
 
 client = get_client()
 
-uploaded_file = st.file_uploader("Upload food image", type=["jpg", "jpeg", "png", "webp"], label_visibility="collapsed")
+uploaded_file = st.file_uploader(
+    t("Upload food image", "បង្ហោះរូបភាពម្ហូប"),
+    type=["jpg", "jpeg", "png", "webp"],
+    label_visibility="collapsed"
+)
 
 if uploaded_file:
     img = Image.open(uploaded_file)
     st.image(img, use_container_width=True)
 
-    with st.spinner("Analyzing your food..."):
-        prompt = """
-Analyze the food image.
+    with st.spinner(t("Analyzing your food...", "កំពុងវិភាគម្ហូបរបស់អ្នក...")):
 
-Return ONLY JSON like this:
+        lang_instruction = (
+            "Respond with food name and ingredients in Khmer language."
+            if st.session_state.lang == "km"
+            else "Respond with food name and ingredients in English."
+        )
 
-{
+        prompt = f"""Analyze the food image. {lang_instruction}
+
+Return ONLY a JSON object, no markdown, no explanation:
+
+{{
   "food": "food name",
-  "calories": "estimated calories",
-  "ingredients": ["ingredient1","ingredient2","ingredient3"]
-}
-"""
+  "calories": "estimated total calories as number only",
+  "ingredients": ["ingredient1", "ingredient2", "ingredient3"],
+  "nutrition": {{
+    "protein": "Xg",
+    "carbs": "Xg",
+    "fat": "Xg",
+    "fiber": "Xg",
+    "sugar": "Xg",
+    "sodium": "Xmg"
+  }}
+}}"""
+
         try:
             response = client.models.generate_content(
                 model="gemini-2.0-flash",
@@ -211,35 +227,52 @@ Return ONLY JSON like this:
             text = response.text.replace("```json", "").replace("```", "").strip()
             data = json.loads(text)
 
-            food = data.get("food", "មិនដឹង")
-            calories = str(data.get("calories", "?"))
-
-            ignore = ["bun", "bread", "beef patty"]
+            food      = data.get("food", "មិនដឹង" if st.session_state.lang == "km" else "Unknown")
+            calories  = str(data.get("calories", "?"))
+            nutrition = data.get("nutrition", {})
+            ignore    = ["bun", "bread", "beef patty"]
             ingredients = [i for i in data.get("ingredients", []) if i.lower() not in ignore]
 
-            # Results
             st.markdown(f"""
-            <div class="result-wrapper">
+            <div class="glass-card">
+                <div class="label">{t("Detected Food", "ម្ហូបដែលបានរកឃើញ")}</div>
+                <div class="food-name">🍽️ {food}</div>
+            </div>""", unsafe_allow_html=True)
+
+            st.markdown(f"""
+            <div class="glass-card">
+                <div class="label">{t("Estimated Calories", "កាឡូរីដែលប៉ាន់ស្មាន")}</div>
+                <div><span class="calories-value">🔥 {calories}</span><span class="calories-unit">kcal</span></div>
+            </div>""", unsafe_allow_html=True)
+
+            if nutrition:
+                items = [
+                    ("💪", t("Protein", "ប្រូតេអ៊ីន"),   nutrition.get("protein", "–")),
+                    ("🍞", t("Carbs",   "កាបូអ៊ីដ្រាត"),  nutrition.get("carbs",   "–")),
+                    ("🧈", t("Fat",     "ខ្លាញ់"),         nutrition.get("fat",     "–")),
+                    ("🌿", t("Fiber",   "ជាតិសរសៃ"),       nutrition.get("fiber",   "–")),
+                    ("🍬", t("Sugar",   "ស្ករ"),           nutrition.get("sugar",   "–")),
+                    ("🧂", t("Sodium",  "អំបិល"),          nutrition.get("sodium",  "–")),
+                ]
+                grid = "".join(f"""<div class="nutrition-item">
+                    <div class="nutrition-icon">{icon}</div>
+                    <div class="nutrition-name">{name}</div>
+                    <div class="nutrition-value">{val}</div>
+                </div>""" for icon, name, val in items)
+
+                st.markdown(f"""
                 <div class="glass-card">
-                    <div class="label">Detected Food</div>
-                    <div class="food-name">🍽️ {food}</div>
-                </div>
-                <div class="glass-card">
-                    <div class="label">Estimated Calories</div>
-                    <div><span class="calories-value">🔥 {calories}</span><span class="calories-unit">kcal</span></div>
-                </div>
-            """, unsafe_allow_html=True)
+                    <div class="label">{t("Nutrition Breakdown", "តម្លៃអាហារូបត្ថម្ភ")}</div>
+                    <div class="nutrition-grid">{grid}</div>
+                </div>""", unsafe_allow_html=True)
 
             if ingredients:
                 tags = "".join(f'<span class="ingredient-tag">{i}</span>' for i in ingredients)
                 st.markdown(f"""
                 <div class="glass-card">
-                    <div class="label">Ingredients</div>
+                    <div class="label">{t("Ingredients", "គ្រឿងផ្សំ")}</div>
                     <div style="margin-top:0.6rem">{tags}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            st.markdown("</div>", unsafe_allow_html=True)
+                </div>""", unsafe_allow_html=True)
 
         except Exception as e:
-            st.error(f"Error analyzing image: {e}")
+            st.error(f"{t('Error analyzing image', 'មានបញ្ហាក្នុងការវិភាគរូបភាព')}: {e}")
