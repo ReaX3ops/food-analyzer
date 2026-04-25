@@ -156,12 +156,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ── Init session state ──
 if "lang" not in st.session_state:
     st.session_state.lang = "en"
+if "result" not in st.session_state:
+    st.session_state.result = None
+if "image" not in st.session_state:
+    st.session_state.image = None
 
 def t(en, km):
     return km if st.session_state.lang == "km" else en
 
+# ── Hero ──
 st.markdown(f"""
 <div class="hero-card">
     <div class="hero-title">🍱 SnackScan</div>
@@ -170,18 +176,20 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ── Language toggle (no rerun needed, just flips the label) ──
 col1, col2 = st.columns([6, 1])
 with col2:
     if st.button("🇰🇭 KM" if st.session_state.lang == "en" else "🇬🇧 EN"):
         st.session_state.lang = "km" if st.session_state.lang == "en" else "en"
-        st.rerun()
 
+# ── Gemini client ──
 @st.cache_resource
 def get_client():
     return genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 client = get_client()
 
+# ── Upload ──
 uploaded_file = st.file_uploader(
     t("Upload food image", "បង្ហោះរូបភាពម្ហូប"),
     type=["jpg", "jpeg", "png", "webp"],
@@ -190,89 +198,93 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
     img = Image.open(uploaded_file)
-    st.image(img, use_container_width=True)
+    st.session_state.image = img
 
-    with st.spinner(t("Analyzing your food...", "កំពុងវិភាគម្ហូបរបស់អ្នក...")):
-
-        lang_instruction = (
-            "Respond with food name and ingredients in Khmer language."
-            if st.session_state.lang == "km"
-            else "Respond with food name and ingredients in English."
-        )
-
-        prompt = f"""Analyze the food image. {lang_instruction}
+    # Only call Gemini if we don't have a result yet
+    if st.session_state.result is None:
+        with st.spinner(t("Analyzing your food...", "កំពុងវិភាគម្ហូបរបស់អ្នក...")):
+            prompt = """Analyze the food image.
 
 Return ONLY a JSON object, no markdown, no explanation:
 
-{{
-  "food": "food name",
+{
+  "food_en": "food name in English",
+  "food_km": "food name in Khmer",
   "calories": "estimated total calories as number only",
-  "ingredients": ["ingredient1", "ingredient2", "ingredient3"],
-  "nutrition": {{
+  "ingredients_en": ["ingredient1", "ingredient2", "ingredient3"],
+  "ingredients_km": ["ingredient1 in Khmer", "ingredient2 in Khmer", "ingredient3 in Khmer"],
+  "nutrition": {
     "protein": "Xg",
     "carbs": "Xg",
     "fat": "Xg",
     "fiber": "Xg",
     "sugar": "Xg",
     "sodium": "Xmg"
-  }}
-}}"""
+  }
+}"""
 
-        try:
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=[prompt, img]
-            )
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=[prompt, img]
+                )
+                text = response.text.replace("```json", "").replace("```", "").strip()
+                st.session_state.result = json.loads(text)
+            except Exception as e:
+                st.error(f"Error analyzing image: {e}")
 
-            text = response.text.replace("```json", "").replace("```", "").strip()
-            data = json.loads(text)
+# ── Display results ──
+if st.session_state.image is not None:
+    st.image(st.session_state.image, use_container_width=True)
 
-            food      = data.get("food", "មិនដឹង" if st.session_state.lang == "km" else "Unknown")
-            calories  = str(data.get("calories", "?"))
-            nutrition = data.get("nutrition", {})
-            ignore    = ["bun", "bread", "beef patty"]
-            ingredients = [i for i in data.get("ingredients", []) if i.lower() not in ignore]
+if st.session_state.result is not None:
+    data = st.session_state.result
+    lang = st.session_state.lang
 
-            st.markdown(f"""
-            <div class="glass-card">
-                <div class="label">{t("Detected Food", "ម្ហូបដែលបានរកឃើញ")}</div>
-                <div class="food-name">🍽️ {food}</div>
-            </div>""", unsafe_allow_html=True)
+    food = data.get("food_km" if lang == "km" else "food_en", "Unknown")
+    calories = str(data.get("calories", "?"))
+    nutrition = data.get("nutrition", {})
+    ignore = ["bun", "bread", "beef patty"]
+    ingredients_key = "ingredients_km" if lang == "km" else "ingredients_en"
+    ingredients = [i for i in data.get(ingredients_key, []) if i.lower() not in ignore]
 
-            st.markdown(f"""
-            <div class="glass-card">
-                <div class="label">{t("Estimated Calories", "កាឡូរីដែលប៉ាន់ស្មាន")}</div>
-                <div><span class="calories-value">🔥 {calories}</span><span class="calories-unit">kcal</span></div>
-            </div>""", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="glass-card">
+        <div class="label">{t("Detected Food", "ម្ហូបដែលបានរកឃើញ")}</div>
+        <div class="food-name">🍽️ {food}</div>
+    </div>""", unsafe_allow_html=True)
 
-            if nutrition:
-                items = [
-                    ("💪", t("Protein", "ប្រូតេអ៊ីន"),   nutrition.get("protein", "–")),
-                    ("🍞", t("Carbs",   "កាបូអ៊ីដ្រាត"),  nutrition.get("carbs",   "–")),
-                    ("🧈", t("Fat",     "ខ្លាញ់"),         nutrition.get("fat",     "–")),
-                    ("🌿", t("Fiber",   "ជាតិសរសៃ"),       nutrition.get("fiber",   "–")),
-                    ("🍬", t("Sugar",   "ស្ករ"),           nutrition.get("sugar",   "–")),
-                    ("🧂", t("Sodium",  "អំបិល"),          nutrition.get("sodium",  "–")),
-                ]
-                grid = "".join(f"""<div class="nutrition-item">
-                    <div class="nutrition-icon">{icon}</div>
-                    <div class="nutrition-name">{name}</div>
-                    <div class="nutrition-value">{val}</div>
-                </div>""" for icon, name, val in items)
+    st.markdown(f"""
+    <div class="glass-card">
+        <div class="label">{t("Estimated Calories", "កាឡូរីដែលប៉ាន់ស្មាន")}</div>
+        <div><span class="calories-value">🔥 {calories}</span><span class="calories-unit">kcal</span></div>
+    </div>""", unsafe_allow_html=True)
 
-                st.markdown(f"""
-                <div class="glass-card">
-                    <div class="label">{t("Nutrition Breakdown", "តម្លៃអាហារូបត្ថម្ភ")}</div>
-                    <div class="nutrition-grid">{grid}</div>
-                </div>""", unsafe_allow_html=True)
+    if nutrition:
+        items = [
+            ("💪", t("Protein", "ប្រូតេអ៊ីន"),   nutrition.get("protein", "–")),
+            ("🍞", t("Carbs",   "កាបូអ៊ីដ្រាត"),  nutrition.get("carbs",   "–")),
+            ("🧈", t("Fat",     "ខ្លាញ់"),         nutrition.get("fat",     "–")),
+            ("🌿", t("Fiber",   "ជាតិសរសៃ"),       nutrition.get("fiber",   "–")),
+            ("🍬", t("Sugar",   "ស្ករ"),           nutrition.get("sugar",   "–")),
+            ("🧂", t("Sodium",  "អំបិល"),          nutrition.get("sodium",  "–")),
+        ]
+        grid = "".join(f"""<div class="nutrition-item">
+            <div class="nutrition-icon">{icon}</div>
+            <div class="nutrition-name">{name}</div>
+            <div class="nutrition-value">{val}</div>
+        </div>""" for icon, name, val in items)
 
-            if ingredients:
-                tags = "".join(f'<span class="ingredient-tag">{i}</span>' for i in ingredients)
-                st.markdown(f"""
-                <div class="glass-card">
-                    <div class="label">{t("Ingredients", "គ្រឿងផ្សំ")}</div>
-                    <div style="margin-top:0.6rem">{tags}</div>
-                </div>""", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="glass-card">
+            <div class="label">{t("Nutrition Breakdown", "តម្លៃអាហារូបត្ថម្ភ")}</div>
+            <div class="nutrition-grid">{grid}</div>
+        </div>""", unsafe_allow_html=True)
 
-        except Exception as e:
-            st.error(f"{t('Error analyzing image', 'មានបញ្ហាក្នុងការវិភាគរូបភាព')}: {e}")
+    if ingredients:
+        tags = "".join(f'<span class="ingredient-tag">{i}</span>' for i in ingredients)
+        st.markdown(f"""
+        <div class="glass-card">
+            <div class="label">{t("Ingredients", "គ្រឿងផ្សំ")}</div>
+            <div style="margin-top:0.6rem">{tags}</div>
+        </div>""", unsafe_allow_html=True)
