@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SnackScan</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <div class="language-switcher">
+    <button id="toggle-lang">EN / ខ្មែរ</button>
+  </div>
+
+  <div class="container">
+
+    <!-- Header -->
+    <div class="app-header">
+      <span class="app-icon">🍔</span>
+      <h1>SnackScan</h1>
+      <p>Snap a snack. Know your nutrition.</p>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="glass-card upload-card">
+
+      {% if image_url %}
+        <img src="{{ image_url }}" alt="Food preview" class="food-image-preview">
+      {% endif %}
+
+      <form id="upload-form" method="POST" enctype="multipart/form-data" style="width:100%; display:flex; flex-direction:column; gap:14px;">
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" name="food_image" id="food_image" accept="image/*" required>
+          <span class="upload-icon">📷</span>
+          <p><strong>Tap to choose a photo</strong></p>
+          <p>or drop your food image here</p>
+          <p class="file-name-display" id="file-name-display"></p>
+        </div>
+        <button type="submit" class="scan-btn">Scan Food</button>
+      </form>
+
+    </div>
+
+    <!-- Result Card -->
+    <div class="glass-card result-card" id="result-card">
+
+      <div class="result-header">
+        <div class="food-name-block">
+          <div class="result-label" id="food-label">Food</div>
+          <div id="food-name">{{ food }}</div>
+        </div>
+        <div class="calories-pill">
+          <span class="cal-label" id="calories-label">Calories</span>
+          <span id="calories-value">{{ calories }}</span>
+        </div>
+      </div>
+
+      <div class="result-divider"></div>
+
+      <div class="ingredients-section">
+        <div class="result-label" id="ingredients-label">Ingredients</div>
+        <div class="ingredients-grid" id="ingredients-list">
+          {% for i in ingredients %}
+            <span class="ingredient-chip">{{ i }}</span>
+          {% else %}
+            <span style="color: rgba(255,255,255,0.45); font-size:14px;">—</span>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
