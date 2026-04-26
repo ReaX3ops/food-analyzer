@@ -308,7 +308,7 @@ def t(en, km):
     return km if st.session_state.lang == "km" else en
 
 # ── Hero ──
-st.image("logo.png", width=100)
+st.image("Logo_SnackScan.png", width=100)
 st.markdown(f"""
 <div class="hero-wrap">
     <div class="hero-badge">✦ AI Powered · Cambodia</div>
