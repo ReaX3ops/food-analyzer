@@ -6,4 +6,4 @@ __pycache__/
 *.jpeg
 *.jpg
 *.png
-.streamlit/
+.streamlit/!Logo_SnackScan.png
