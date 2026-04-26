@@ -2,278 +2,370 @@ import streamlit as st
 from google import genai
 from PIL import Image
 import json
+import time
 
 st.set_page_config(
-    page_title="SnackScan",
+    page_title="SnackScanKH",
     page_icon="🍱",
     layout="centered"
 )
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
-* { font-family: 'Outfit', sans-serif; }
+* { font-family: 'Outfit', sans-serif; box-sizing: border-box; }
 
 .stApp {
-    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    background: radial-gradient(ellipse at 20% 20%, #1a0533 0%, #0d0d1a 40%, #000510 100%);
     min-height: 100vh;
 }
 
 #MainMenu, footer, header { visibility: hidden; }
-.block-container { padding-top: 2rem; max-width: 700px; }
+.block-container { padding-top: 2.5rem; max-width: 720px; }
 
-.hero-card {
-    background: rgba(255,255,255,0.07);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 24px;
-    padding: 1.8rem 2.5rem;
+/* ── Hero ── */
+.hero-wrap {
+    position: relative;
     text-align: center;
-    margin-bottom: 1.2rem;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    padding: 2.5rem 2rem 2rem;
+    margin-bottom: 1.5rem;
+    border-radius: 28px;
+    background: linear-gradient(135deg,
+        rgba(120,60,255,0.18) 0%,
+        rgba(30,20,80,0.55) 50%,
+        rgba(0,180,255,0.10) 100%);
+    border: 1px solid rgba(150,100,255,0.25);
+    backdrop-filter: blur(24px);
+    overflow: hidden;
+}
+.hero-wrap::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: -60px;
+    width: 260px; height: 260px;
+    background: radial-gradient(circle, rgba(130,60,255,0.25) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero-wrap::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: -40px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(0,180,255,0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero-badge {
+    display: inline-block;
+    background: rgba(130,60,255,0.2);
+    border: 1px solid rgba(150,100,255,0.35);
+    border-radius: 99px;
+    padding: 4px 16px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(180,140,255,0.9);
+    margin-bottom: 1rem;
 }
 .hero-title {
-    font-size: 2.2rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #f8f8f8, #a78bfa, #60a5fa);
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    line-height: 1;
+    margin: 0 0 0.5rem;
+    background: linear-gradient(135deg, #ffffff 0%, #c4a8ff 40%, #7af0ff 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    margin: 0;
 }
 .hero-sub {
-    color: rgba(255,255,255,0.45);
-    font-size: 0.92rem;
-    margin-top: 0.3rem;
+    font-size: 0.95rem;
     font-weight: 300;
+    color: rgba(255,255,255,0.4);
+    margin: 0;
 }
 
-.glass-card {
-    background: rgba(255,255,255,0.07);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 20px;
+/* ── Glass card ── */
+.g-card {
+    position: relative;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 22px;
     padding: 1.4rem 1.8rem;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+    transition: border-color 0.3s;
 }
-.label {
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 1.5px;
+.g-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
+    pointer-events: none;
+}
+.g-card-accent { border-color: rgba(130,60,255,0.35); }
+.g-card-green  { border-color: rgba(50,210,120,0.35); }
+
+.chip-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 1.8px;
     text-transform: uppercase;
-    color: rgba(167,139,250,0.8);
-    margin-bottom: 0.3rem;
+    color: rgba(160,120,255,0.75);
+    margin-bottom: 0.5rem;
 }
+.chip-label-green { color: rgba(50,210,120,0.75); }
+
 .food-name {
-    font-size: 1.9rem;
+    font-size: 2rem;
     font-weight: 700;
-    color: #f8f8f8;
+    color: #f0ecff;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
 }
-.calories-value {
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: #34d399;
+.cal-number {
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -2px;
+    background: linear-gradient(135deg, #34d399, #7af0ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
 }
-.calories-unit {
-    font-size: 0.95rem;
-    color: rgba(255,255,255,0.4);
+.cal-unit {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.3);
     font-weight: 300;
-    margin-left: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
 }
 
-.ingredient-tag {
-    display: inline-block;
-    background: rgba(167,139,250,0.15);
-    border: 1px solid rgba(167,139,250,0.3);
-    border-radius: 50px;
-    padding: 5px 16px;
-    margin: 4px;
-    font-size: 0.88rem;
-    color: rgba(255,255,255,0.85);
-}
-
-.nutrition-grid {
+/* ── Nutrition grid ── */
+.nut-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.8rem;
-    margin-top: 0.6rem;
+    gap: 10px;
+    margin-top: 0.8rem;
 }
-.nutrition-item {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 14px;
-    padding: 0.9rem 0.5rem;
+.nut-cell {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 1rem 0.5rem 0.8rem;
     text-align: center;
+    transition: background 0.2s, border-color 0.2s;
 }
-.nutrition-icon { font-size: 1.4rem; }
-.nutrition-name {
-    font-size: 0.7rem;
-    color: rgba(255,255,255,0.45);
+.nut-cell:hover {
+    background: rgba(130,60,255,0.1);
+    border-color: rgba(130,60,255,0.25);
+}
+.nut-icon { font-size: 1.5rem; line-height: 1; }
+.nut-val {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f0ecff;
+    margin: 4px 0 2px;
+    letter-spacing: -0.3px;
+}
+.nut-name {
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 1.2px;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 0.2rem;
-}
-.nutrition-value {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #f8f8f8;
-    margin-top: 0.1rem;
+    color: rgba(255,255,255,0.35);
 }
 
+/* ── Ingredient tags ── */
+.tag-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.7rem; }
+.tag {
+    background: rgba(130,60,255,0.12);
+    border: 1px solid rgba(130,60,255,0.28);
+    border-radius: 99px;
+    padding: 6px 18px;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: rgba(210,190,255,0.9);
+    letter-spacing: 0.2px;
+}
+
+/* ── Upload zone ── */
 [data-testid="stFileUploadDropzone"] {
-    background: rgba(255,255,255,0.03) !important;
-    border: 2px dashed rgba(167,139,250,0.4) !important;
-    border-radius: 16px !important;
+    background: rgba(130,60,255,0.04) !important;
+    border: 2px dashed rgba(130,60,255,0.3) !important;
+    border-radius: 18px !important;
+    transition: border-color 0.2s, background 0.2s !important;
 }
-[data-testid="stFileUploadDropzone"] p { color: rgba(255,255,255,0.45) !important; }
+[data-testid="stFileUploadDropzone"]:hover {
+    border-color: rgba(130,60,255,0.55) !important;
+    background: rgba(130,60,255,0.08) !important;
+}
+[data-testid="stFileUploadDropzone"] p { color: rgba(255,255,255,0.35) !important; }
 
+/* ── Image ── */
 [data-testid="stImage"] img {
-    border-radius: 20px !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+    border-radius: 22px !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5) !important;
 }
 
+/* ── Text input ── */
 .stTextInput > div > div > input {
-    background: rgba(255,255,255,0.07) !important;
-    border: 1px solid rgba(167,139,250,0.3) !important;
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(130,60,255,0.25) !important;
     border-radius: 14px !important;
-    color: white !important;
+    color: rgba(255,255,255,0.85) !important;
     font-family: 'Outfit', sans-serif !important;
-    padding: 0.6rem 1rem !important;
+    font-size: 0.92rem !important;
 }
-.stTextInput > div > div > input::placeholder { color: rgba(255,255,255,0.3) !important; }
+.stTextInput > div > div > input::placeholder { color: rgba(255,255,255,0.2) !important; }
 .stTextInput > div > div > input:focus {
-    border-color: rgba(167,139,250,0.7) !important;
-    box-shadow: 0 0 0 2px rgba(167,139,250,0.15) !important;
+    border-color: rgba(130,60,255,0.6) !important;
+    box-shadow: 0 0 0 3px rgba(130,60,255,0.12) !important;
+    background: rgba(255,255,255,0.07) !important;
 }
 .stTextInput label {
-    color: rgba(255,255,255,0.5) !important;
-    font-size: 0.8rem !important;
-    letter-spacing: 1px !important;
+    color: rgba(160,120,255,0.7) !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 1.8px !important;
+    text-transform: uppercase !important;
 }
 
-/* Lang toggle button */
+/* ── Buttons ── */
 .stButton > button {
-    background: rgba(167,139,250,0.2) !important;
-    border: 1px solid rgba(167,139,250,0.4) !important;
-    color: white !important;
-    border-radius: 50px !important;
+    background: rgba(130,60,255,0.15) !important;
+    border: 1px solid rgba(130,60,255,0.35) !important;
+    color: rgba(210,185,255,0.95) !important;
+    border-radius: 99px !important;
     font-family: 'Outfit', sans-serif !important;
     font-size: 0.85rem !important;
-}
-.stButton > button:hover {
-    background: rgba(167,139,250,0.35) !important;
-}
-
-/* Scan button — big and glowy */
-div[data-testid="stButton"].scan-btn > button {
-    background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
-    border: none !important;
-    border-radius: 16px !important;
-    color: white !important;
-    font-size: 1.1rem !important;
-    font-weight: 600 !important;
-    padding: 0.75rem 2rem !important;
-    width: 100% !important;
-    box-shadow: 0 4px 24px rgba(124,58,237,0.4) !important;
-    letter-spacing: 0.5px !important;
+    font-weight: 500 !important;
     transition: all 0.2s !important;
 }
-div[data-testid="stButton"].scan-btn > button:hover {
-    box-shadow: 0 6px 32px rgba(124,58,237,0.6) !important;
-    transform: translateY(-1px) !important;
+.stButton > button:hover {
+    background: rgba(130,60,255,0.28) !important;
+    border-color: rgba(130,60,255,0.6) !important;
 }
 
-/* Progress bar */
+/* ── Scan button ── */
+div.scan-btn > div > button, div.scan-btn button {
+    background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%) !important;
+    border: none !important;
+    border-radius: 18px !important;
+    color: white !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    padding: 0.8rem 2rem !important;
+    width: 100% !important;
+    box-shadow: 0 6px 28px rgba(124,58,237,0.45), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    transition: all 0.25s !important;
+}
+div.scan-btn > div > button:hover {
+    box-shadow: 0 8px 36px rgba(124,58,237,0.65) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ── Progress bar ── */
 .stProgress > div > div {
-    background: linear-gradient(90deg, #7c3aed, #a78bfa) !important;
+    background: linear-gradient(90deg, #7c3aed, #a78bfa, #7af0ff) !important;
     border-radius: 99px !important;
 }
 .stProgress > div {
-    background: rgba(255,255,255,0.08) !important;
+    background: rgba(255,255,255,0.06) !important;
     border-radius: 99px !important;
+    height: 6px !important;
 }
 
+/* ── Alert ── */
 .stAlert {
-    background: rgba(239,68,68,0.1) !important;
-    border: 1px solid rgba(239,68,68,0.3) !important;
+    background: rgba(239,68,68,0.08) !important;
+    border: 1px solid rgba(239,68,68,0.25) !important;
     border-radius: 14px !important;
     color: #fca5a5 !important;
 }
+
+/* ── Divider ── */
+hr { border-color: rgba(255,255,255,0.06) !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Session state ──
-if "lang"      not in st.session_state: st.session_state.lang      = "en"
-if "result"    not in st.session_state: st.session_state.result    = None
-if "image"     not in st.session_state: st.session_state.image     = None
-if "last_hint" not in st.session_state: st.session_state.last_hint = ""
+for k, v in {"lang": "en", "result": None, "image": None, "last_hint": ""}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 def t(en, km):
     return km if st.session_state.lang == "km" else en
 
 # ── Hero ──
 st.markdown(f"""
-<div class="hero-card">
-    <div class="hero-title">🍱 SnackScan</div>
-    <div class="hero-sub">{t("Upload a photo — get food name, calories & nutrition instantly",
-                             "បង្ហោះរូបភាព — ទទួលបានឈ្មោះម្ហូប កាឡូរី និងជីវជាតិភ្លាមៗ")}</div>
+<div class="hero-wrap">
+    <div class="hero-badge">✦ AI Powered · Cambodia</div>
+    <div class="hero-title">SnackScan<span style="color:rgba(122,240,255,0.85)">KH</span></div>
+    <p class="hero-sub">{t("Snap a photo. Know your food.", "ថតរូបភាព។ ស្គាល់ម្ហូបរបស់អ្នក។")}</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Language toggle ──
+# ── Lang toggle ──
 col1, col2 = st.columns([6, 1])
 with col2:
     if st.button("🇰🇭 KM" if st.session_state.lang == "en" else "🇬🇧 EN"):
         st.session_state.lang = "km" if st.session_state.lang == "en" else "en"
 
-# ── Gemini client ──
+# ── Client ──
 @st.cache_resource
 def get_client():
     return genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 client = get_client()
 
-# ── Upload + hint ──
+# ── Upload ──
 uploaded_file = st.file_uploader(
-    t("Upload food image", "បង្ហោះរូបភាពម្ហូប"),
+    t("Drop your food photo here", "ទម្លាក់រូបភាពម្ហូបរបស់អ្នកនៅទីនេះ"),
     type=["jpg", "jpeg", "png", "webp"],
     label_visibility="collapsed"
 )
 
 hint = st.text_input(
-    t("SPECIFY YOUR FOOD (OPTIONAL)", "បញ្ជាក់ម្ហូបរបស់អ្នក (ជាជម្រើស)"),
+    t("TELL US MORE (OPTIONAL)", "បញ្ជាក់បន្ថែម (ជាជម្រើស)"),
     placeholder=t('e.g. "whole milk", "brown rice", "grilled chicken breast"',
                   'ឧ. "ទឹកដោះគោទាំងមូល", "បាយស្វាយចន្ទី", "សាច់មាន់អាំង"')
 )
 
-# ── Show image preview ──
 if uploaded_file:
     img = Image.open(uploaded_file)
     st.session_state.image = img
     st.image(img, use_container_width=True)
 
-# ── Scan button ──
-if uploaded_file:
-    scan_clicked = st.button(t("🔍  Scan Food", "🔍  វិភាគម្ហូប"), use_container_width=True)
+    st.markdown('<div class="scan-btn">', unsafe_allow_html=True)
+    scan_clicked = st.button(
+        t("🔍   Scan Food", "🔍   វិភាគម្ហូប"),
+        use_container_width=True
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if scan_clicked:
-        st.session_state.result = None  # clear old result
+        st.session_state.result = None
         st.session_state.last_hint = hint
 
-        # Progress bar animation
-        bar = st.progress(0, text=t("Starting scan...", "កំពុងចាប់ផ្តើម..."))
-        import time
+        bar = st.progress(0, text=t("Waking up the AI...", "កំពុងភ្ញាក់ AI..."))
         steps = [
-            (20, t("Reading image...",        "កំពុងអានរូបភាព...")),
-            (45, t("Identifying food...",     "កំពុងកំណត់ម្ហូប...")),
-            (70, t("Calculating nutrition...", "កំពុងគណនាជីវជាតិ...")),
-            (90, t("Finalizing results...",   "កំពុងបញ្ចប់លទ្ធផល...")),
+            (15, t("Reading your photo...",        "កំពុងអានរូបភាព...")),
+            (35, t("Identifying the food...",      "កំពុងកំណត់ម្ហូប...")),
+            (58, t("Calculating calories...",      "កំពុងគណនាកាឡូរី...")),
+            (78, t("Breaking down nutrition...",   "កំពុងវិភាគជីវជាតិ...")),
+            (92, t("Wrapping up results...",       "កំពុងបញ្ចប់លទ្ធផល...")),
         ]
         for pct, msg in steps:
-            time.sleep(0.4)
+            time.sleep(0.35)
             bar.progress(pct, text=msg)
 
         hint_clause = f'The user says this is: "{hint}". Use this to improve accuracy.' if hint.strip() else ""
@@ -305,34 +397,34 @@ Return ONLY a JSON object, no markdown, no explanation:
             text = response.text.replace("```json", "").replace("```", "").strip()
             st.session_state.result = json.loads(text)
             bar.progress(100, text=t("Done! ✅", "រួចរាល់! ✅"))
-            time.sleep(0.3)
+            time.sleep(0.4)
             bar.empty()
         except Exception as e:
             bar.empty()
-            st.error(f"Error analyzing image: {e}")
+            st.error(f"Error: {e}")
 
-# ── Display results ──
-if st.session_state.result is not None and st.session_state.image is not None:
+# ── Results ──
+if st.session_state.result and st.session_state.image:
     data = st.session_state.result
     lang = st.session_state.lang
 
     food        = data.get("food_km" if lang == "km" else "food_en", "Unknown")
     calories    = str(data.get("calories", "?"))
     nutrition   = data.get("nutrition", {})
-    ignore      = ["bun", "bread", "beef patty"]
     ing_key     = "ingredients_km" if lang == "km" else "ingredients_en"
+    ignore      = ["bun", "bread", "beef patty"]
     ingredients = [i for i in data.get(ing_key, []) if i.lower() not in ignore]
 
     st.markdown(f"""
-    <div class="glass-card">
-        <div class="label">{t("Detected Food", "ម្ហូបដែលបានរកឃើញ")}</div>
-        <div class="food-name">🍽️ {food}</div>
+    <div class="g-card g-card-accent">
+        <div class="chip-label">🍽 {t("Detected Food", "ម្ហូបដែលបានរកឃើញ")}</div>
+        <div class="food-name">{food}</div>
     </div>""", unsafe_allow_html=True)
 
     st.markdown(f"""
-    <div class="glass-card">
-        <div class="label">{t("Estimated Calories", "កាឡូរីដែលប៉ាន់ស្មាន")}</div>
-        <div><span class="calories-value">🔥 {calories}</span><span class="calories-unit">kcal</span></div>
+    <div class="g-card g-card-green">
+        <div class="chip-label chip-label-green">🔥 {t("Estimated Calories", "កាឡូរីដែលប៉ាន់ស្មាន")}</div>
+        <div><span class="cal-number">{calories}</span><span class="cal-unit">kcal</span></div>
     </div>""", unsafe_allow_html=True)
 
     if nutrition:
@@ -344,22 +436,22 @@ if st.session_state.result is not None and st.session_state.image is not None:
             ("🍬", t("Sugar",   "ស្ករ"),           nutrition.get("sugar",   "–")),
             ("🧂", t("Sodium",  "អំបិល"),          nutrition.get("sodium",  "–")),
         ]
-        grid = "".join(f"""<div class="nutrition-item">
-            <div class="nutrition-icon">{icon}</div>
-            <div class="nutrition-name">{name}</div>
-            <div class="nutrition-value">{val}</div>
+        cells = "".join(f"""<div class="nut-cell">
+            <div class="nut-icon">{icon}</div>
+            <div class="nut-val">{val}</div>
+            <div class="nut-name">{name}</div>
         </div>""" for icon, name, val in items)
 
         st.markdown(f"""
-        <div class="glass-card">
-            <div class="label">{t("Nutrition Breakdown", "តម្លៃអាហារូបត្ថម្ភ")}</div>
-            <div class="nutrition-grid">{grid}</div>
+        <div class="g-card">
+            <div class="chip-label">🧬 {t("Nutrition Breakdown", "តម្លៃអាហារូបត្ថម្ភ")}</div>
+            <div class="nut-grid">{cells}</div>
         </div>""", unsafe_allow_html=True)
 
     if ingredients:
-        tags = "".join(f'<span class="ingredient-tag">{i}</span>' for i in ingredients)
+        tags = "".join(f'<span class="tag">{i}</span>' for i in ingredients)
         st.markdown(f"""
-        <div class="glass-card">
-            <div class="label">{t("Ingredients", "គ្រឿងផ្សំ")}</div>
-            <div style="margin-top:0.6rem">{tags}</div>
+        <div class="g-card">
+            <div class="chip-label">🥬 {t("Ingredients", "គ្រឿងផ្សំ")}</div>
+            <div class="tag-wrap">{tags}</div>
         </div>""", unsafe_allow_html=True)
