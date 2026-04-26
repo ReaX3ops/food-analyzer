@@ -135,6 +135,28 @@ st.markdown("""
     box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
 }
 
+/* Text input glass style */
+.stTextInput > div > div > input {
+    background: rgba(255,255,255,0.07) !important;
+    border: 1px solid rgba(167,139,250,0.3) !important;
+    border-radius: 14px !important;
+    color: white !important;
+    font-family: 'Outfit', sans-serif !important;
+    padding: 0.6rem 1rem !important;
+}
+.stTextInput > div > div > input::placeholder {
+    color: rgba(255,255,255,0.3) !important;
+}
+.stTextInput > div > div > input:focus {
+    border-color: rgba(167,139,250,0.7) !important;
+    box-shadow: 0 0 0 2px rgba(167,139,250,0.15) !important;
+}
+.stTextInput label {
+    color: rgba(255,255,255,0.5) !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 1px !important;
+}
+
 .stButton > button {
     background: rgba(167,139,250,0.2) !important;
     border: 1px solid rgba(167,139,250,0.4) !important;
@@ -163,6 +185,8 @@ if "result" not in st.session_state:
     st.session_state.result = None
 if "image" not in st.session_state:
     st.session_state.image = None
+if "last_hint" not in st.session_state:
+    st.session_state.last_hint = ""
 
 def t(en, km):
     return km if st.session_state.lang == "km" else en
@@ -176,7 +200,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Language toggle (no rerun needed, just flips the label) ──
+# ── Language toggle ──
 col1, col2 = st.columns([6, 1])
 with col2:
     if st.button("🇰🇭 KM" if st.session_state.lang == "en" else "🇬🇧 EN"):
@@ -196,32 +220,47 @@ uploaded_file = st.file_uploader(
     label_visibility="collapsed"
 )
 
+# ── Hint textbox ──
+hint = st.text_input(
+    t("SPECIFY YOUR FOOD (OPTIONAL)", "បញ្ជាក់ម្ហូបរបស់អ្នក (ជាជម្រើស)"),
+    placeholder=t('e.g. "whole milk", "brown rice", "grilled chicken breast"',
+                  'ឧ. "ទឹកដោះគោទាំងមូល", "បាយស្វាយចន្ទី", "សាច់មាន់អាំង"')
+)
+
+# ── Analyze button (shows only when image is uploaded) ──
 if uploaded_file:
     img = Image.open(uploaded_file)
     st.session_state.image = img
+    st.image(img, use_container_width=True)
 
-    # Only call Gemini if we don't have a result yet
-    if st.session_state.result is None:
+    # Re-analyze if hint changed or no result yet
+    hint_changed = hint != st.session_state.last_hint
+    if st.session_state.result is None or hint_changed:
+        if hint_changed:
+            st.session_state.last_hint = hint
+
         with st.spinner(t("Analyzing your food...", "កំពុងវិភាគម្ហូបរបស់អ្នក...")):
-            prompt = """Analyze the food image.
+            hint_clause = f'The user says this is: "{hint}". Use this to improve accuracy.' if hint.strip() else ""
+
+            prompt = f"""Analyze the food image. {hint_clause}
 
 Return ONLY a JSON object, no markdown, no explanation:
 
-{
+{{
   "food_en": "food name in English",
   "food_km": "food name in Khmer",
   "calories": "estimated total calories as number only",
   "ingredients_en": ["ingredient1", "ingredient2", "ingredient3"],
   "ingredients_km": ["ingredient1 in Khmer", "ingredient2 in Khmer", "ingredient3 in Khmer"],
-  "nutrition": {
+  "nutrition": {{
     "protein": "Xg",
     "carbs": "Xg",
     "fat": "Xg",
     "fiber": "Xg",
     "sugar": "Xg",
     "sodium": "Xmg"
-  }
-}"""
+  }}
+}}"""
 
             try:
                 response = client.models.generate_content(
@@ -234,10 +273,7 @@ Return ONLY a JSON object, no markdown, no explanation:
                 st.error(f"Error analyzing image: {e}")
 
 # ── Display results ──
-if st.session_state.image is not None:
-    st.image(st.session_state.image, use_container_width=True)
-
-if st.session_state.result is not None:
+if st.session_state.result is not None and st.session_state.image is not None:
     data = st.session_state.result
     lang = st.session_state.lang
 
