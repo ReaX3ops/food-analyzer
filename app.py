@@ -8,6 +8,7 @@ st.set_page_config(
     page_title="SnackScanKH",
     page_icon="🍱",
     layout="centered"
+    
 )
 
 st.markdown("""
@@ -85,6 +86,7 @@ st.markdown("""
     color: rgba(255,255,255,0.4);
     margin: 0;
 }
+
 
 /* ── Glass card ── */
 .g-card {
@@ -306,6 +308,7 @@ def t(en, km):
     return km if st.session_state.lang == "km" else en
 
 # ── Hero ──
+st.image("logo.png", width=100)
 st.markdown(f"""
 <div class="hero-wrap">
     <div class="hero-badge">✦ AI Powered · Cambodia</div>
