@@ -8,7 +8,6 @@ st.set_page_config(
     page_title="SnackScanKH",
     page_icon="🍱",
     layout="centered"
-    
 )
 
 st.markdown("""
@@ -86,7 +85,6 @@ st.markdown("""
     color: rgba(255,255,255,0.4);
     margin: 0;
 }
-
 
 /* ── Glass card ── */
 .g-card {
@@ -308,7 +306,6 @@ def t(en, km):
     return km if st.session_state.lang == "km" else en
 
 # ── Hero ──
-st.image("Logo_SnackScan.png", width=100)
 st.markdown(f"""
 <div class="hero-wrap">
     <div class="hero-badge">✦ AI Powered · Cambodia</div>
@@ -458,3 +455,283 @@ if st.session_state.result and st.session_state.image:
             <div class="chip-label">🥬 {t("Ingredients", "គ្រឿងផ្សំ")}</div>
             <div class="tag-wrap">{tags}</div>
         </div>""", unsafe_allow_html=True)
+
+# ── About Section ──
+st.markdown("""
+<style>
+/* About card */
+.about-wrap {
+    position: relative;
+    margin-top: 3rem;
+    border-radius: 28px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(24px);
+    padding: 2.5rem 2rem 2rem;
+    text-align: center;
+}
+
+/* Animated shimmer line at top */
+.about-wrap::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 300%;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(130,60,255,0.8) 30%,
+        rgba(122,240,255,0.8) 50%,
+        rgba(130,60,255,0.8) 70%,
+        transparent 100%);
+    animation: shimmer-line 4s linear infinite;
+}
+@keyframes shimmer-line {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(33.33%); }
+}
+
+/* Floating orbs */
+.about-orb1 {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(130,60,255,0.12) 0%, transparent 70%);
+    top: -60px; left: -60px;
+    animation: float1 6s ease-in-out infinite;
+    pointer-events: none;
+}
+.about-orb2 {
+    position: absolute;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,180,255,0.1) 0%, transparent 70%);
+    bottom: -40px; right: -40px;
+    animation: float2 7s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes float1 {
+    0%, 100% { transform: translate(0, 0); }
+    50%       { transform: translate(15px, 20px); }
+}
+@keyframes float2 {
+    0%, 100% { transform: translate(0, 0); }
+    50%       { transform: translate(-12px, -18px); }
+}
+
+/* Avatar ring */
+.avatar-ring {
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    margin: 0 auto 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    font-size: 2.2rem;
+    background: rgba(130,60,255,0.12);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+.avatar-ring::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #7af0ff, #7c3aed);
+    background-size: 200% 200%;
+    z-index: -1;
+    animation: spin-gradient 4s linear infinite;
+}
+@keyframes spin-gradient {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Name */
+.about-name {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: #f0ecff;
+    margin: 0 0 0.3rem;
+}
+
+/* Bio */
+.about-bio {
+    font-size: 0.9rem;
+    font-weight: 300;
+    color: rgba(255,255,255,0.45);
+    margin: 0 0 1.4rem;
+    line-height: 1.6;
+}
+
+/* Stats row */
+.about-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 1.6rem;
+    padding-bottom: 1.4rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.stat-item { text-align: center; }
+.stat-val {
+    font-size: 1.2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #c4a8ff, #7af0ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: block;
+}
+.stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: rgba(255,255,255,0.3);
+    font-weight: 500;
+}
+
+/* Color picker row */
+.color-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 1.4rem;
+    flex-wrap: wrap;
+}
+.color-dot {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.15);
+    transition: transform 0.2s, border-color 0.2s;
+    display: inline-block;
+}
+.color-dot:hover { transform: scale(1.25); border-color: rgba(255,255,255,0.5); }
+.color-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.3);
+    font-weight: 500;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+/* GitHub link */
+.gh-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 99px;
+    padding: 8px 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    margin-top: 0.2rem;
+}
+.gh-link:hover {
+    background: rgba(130,60,255,0.18);
+    border-color: rgba(130,60,255,0.45);
+    color: rgba(210,185,255,0.95);
+    text-decoration: none;
+}
+
+/* Footer line */
+.about-footer {
+    margin-top: 1.6rem;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.18);
+    letter-spacing: 0.5px;
+}
+
+/* Fade-in animation for the whole card */
+.about-wrap {
+    animation: fadeUp 0.7s ease both;
+}
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Theme dot mode toggle */
+.mode-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+}
+.mode-pill {
+    font-size: 0.72rem;
+    padding: 4px 14px;
+    border-radius: 99px;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.45);
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.mode-pill:hover {
+    background: rgba(130,60,255,0.2);
+    border-color: rgba(130,60,255,0.4);
+    color: rgba(210,185,255,0.9);
+}
+</style>
+
+<div class="about-wrap">
+    <div class="about-orb1"></div>
+    <div class="about-orb2"></div>
+
+    <div class="avatar-ring">👨‍💻</div>
+
+    <div class="about-name">Than Vireakseth</div>
+    <div class="about-bio">
+        A student developer from Cambodia 🇰🇭<br>
+        <span style="color:rgba(160,120,255,0.6);font-size:0.82rem;">Building things with AI, one scan at a time.</span>
+    </div>
+
+    <div class="about-stats">
+        <div class="stat-item">
+            <span class="stat-val">Gemini</span>
+            <span class="stat-label">AI Model</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-val">2</span>
+            <span class="stat-label">Languages</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-val">6</span>
+            <span class="stat-label">Nutrients</span>
+        </div>
+    </div>
+
+    <div class="color-row">
+        <div class="color-label">✦ Accent Colors</div>
+        <div class="color-dot" style="background:linear-gradient(135deg,#7c3aed,#4338ca);" title="Purple"></div>
+        <div class="color-dot" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);" title="Cyan"></div>
+        <div class="color-dot" style="background:linear-gradient(135deg,#f97316,#ef4444);" title="Sunset"></div>
+        <div class="color-dot" style="background:linear-gradient(135deg,#10b981,#34d399);" title="Emerald"></div>
+        <div class="color-dot" style="background:linear-gradient(135deg,#ec4899,#a855f7);" title="Pink"></div>
+        <div class="color-dot" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);" title="Gold"></div>
+    </div>
+
+    <a class="gh-link" href="https://github.com/ReaX3ops" target="_blank">
+        ⌥ github.com/ReaX3ops
+    </a>
+
+    <div class="about-footer">
+        Made with ♥ in Phnom Penh · SnackScanKH © 2026
+    </div>
+</div>
+""", unsafe_allow_html=True)
