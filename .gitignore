@@ -5,5 +5,5 @@ __pycache__/
 *.avif
 *.jpeg
 *.jpg
-*.png
 .streamlit/!Logo_SnackScan.png
+!Logo_SnackScan.png
