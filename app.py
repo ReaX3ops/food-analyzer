@@ -135,7 +135,6 @@ st.markdown("""
     box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
 }
 
-/* Text input glass style */
 .stTextInput > div > div > input {
     background: rgba(255,255,255,0.07) !important;
     border: 1px solid rgba(167,139,250,0.3) !important;
@@ -144,9 +143,7 @@ st.markdown("""
     font-family: 'Outfit', sans-serif !important;
     padding: 0.6rem 1rem !important;
 }
-.stTextInput > div > div > input::placeholder {
-    color: rgba(255,255,255,0.3) !important;
-}
+.stTextInput > div > div > input::placeholder { color: rgba(255,255,255,0.3) !important; }
 .stTextInput > div > div > input:focus {
     border-color: rgba(167,139,250,0.7) !important;
     box-shadow: 0 0 0 2px rgba(167,139,250,0.15) !important;
@@ -157,6 +154,7 @@ st.markdown("""
     letter-spacing: 1px !important;
 }
 
+/* Lang toggle button */
 .stButton > button {
     background: rgba(167,139,250,0.2) !important;
     border: 1px solid rgba(167,139,250,0.4) !important;
@@ -169,6 +167,35 @@ st.markdown("""
     background: rgba(167,139,250,0.35) !important;
 }
 
+/* Scan button — big and glowy */
+div[data-testid="stButton"].scan-btn > button {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
+    border: none !important;
+    border-radius: 16px !important;
+    color: white !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 2rem !important;
+    width: 100% !important;
+    box-shadow: 0 4px 24px rgba(124,58,237,0.4) !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.2s !important;
+}
+div[data-testid="stButton"].scan-btn > button:hover {
+    box-shadow: 0 6px 32px rgba(124,58,237,0.6) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Progress bar */
+.stProgress > div > div {
+    background: linear-gradient(90deg, #7c3aed, #a78bfa) !important;
+    border-radius: 99px !important;
+}
+.stProgress > div {
+    background: rgba(255,255,255,0.08) !important;
+    border-radius: 99px !important;
+}
+
 .stAlert {
     background: rgba(239,68,68,0.1) !important;
     border: 1px solid rgba(239,68,68,0.3) !important;
@@ -178,15 +205,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Init session state ──
-if "lang" not in st.session_state:
-    st.session_state.lang = "en"
-if "result" not in st.session_state:
-    st.session_state.result = None
-if "image" not in st.session_state:
-    st.session_state.image = None
-if "last_hint" not in st.session_state:
-    st.session_state.last_hint = ""
+# ── Session state ──
+if "lang"      not in st.session_state: st.session_state.lang      = "en"
+if "result"    not in st.session_state: st.session_state.result    = None
+if "image"     not in st.session_state: st.session_state.image     = None
+if "last_hint" not in st.session_state: st.session_state.last_hint = ""
 
 def t(en, km):
     return km if st.session_state.lang == "km" else en
@@ -213,36 +236,48 @@ def get_client():
 
 client = get_client()
 
-# ── Upload ──
+# ── Upload + hint ──
 uploaded_file = st.file_uploader(
     t("Upload food image", "បង្ហោះរូបភាពម្ហូប"),
     type=["jpg", "jpeg", "png", "webp"],
     label_visibility="collapsed"
 )
 
-# ── Hint textbox ──
 hint = st.text_input(
     t("SPECIFY YOUR FOOD (OPTIONAL)", "បញ្ជាក់ម្ហូបរបស់អ្នក (ជាជម្រើស)"),
     placeholder=t('e.g. "whole milk", "brown rice", "grilled chicken breast"',
                   'ឧ. "ទឹកដោះគោទាំងមូល", "បាយស្វាយចន្ទី", "សាច់មាន់អាំង"')
 )
 
-# ── Analyze button (shows only when image is uploaded) ──
+# ── Show image preview ──
 if uploaded_file:
     img = Image.open(uploaded_file)
     st.session_state.image = img
     st.image(img, use_container_width=True)
 
-    # Re-analyze if hint changed or no result yet
-    hint_changed = hint != st.session_state.last_hint
-    if st.session_state.result is None or hint_changed:
-        if hint_changed:
-            st.session_state.last_hint = hint
+# ── Scan button ──
+if uploaded_file:
+    scan_clicked = st.button(t("🔍  Scan Food", "🔍  វិភាគម្ហូប"), use_container_width=True)
 
-        with st.spinner(t("Analyzing your food...", "កំពុងវិភាគម្ហូបរបស់អ្នក...")):
-            hint_clause = f'The user says this is: "{hint}". Use this to improve accuracy.' if hint.strip() else ""
+    if scan_clicked:
+        st.session_state.result = None  # clear old result
+        st.session_state.last_hint = hint
 
-            prompt = f"""Analyze the food image. {hint_clause}
+        # Progress bar animation
+        bar = st.progress(0, text=t("Starting scan...", "កំពុងចាប់ផ្តើម..."))
+        import time
+        steps = [
+            (20, t("Reading image...",        "កំពុងអានរូបភាព...")),
+            (45, t("Identifying food...",     "កំពុងកំណត់ម្ហូប...")),
+            (70, t("Calculating nutrition...", "កំពុងគណនាជីវជាតិ...")),
+            (90, t("Finalizing results...",   "កំពុងបញ្ចប់លទ្ធផល...")),
+        ]
+        for pct, msg in steps:
+            time.sleep(0.4)
+            bar.progress(pct, text=msg)
+
+        hint_clause = f'The user says this is: "{hint}". Use this to improve accuracy.' if hint.strip() else ""
+        prompt = f"""Analyze the food image. {hint_clause}
 
 Return ONLY a JSON object, no markdown, no explanation:
 
@@ -262,27 +297,31 @@ Return ONLY a JSON object, no markdown, no explanation:
   }}
 }}"""
 
-            try:
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=[prompt, img]
-                )
-                text = response.text.replace("```json", "").replace("```", "").strip()
-                st.session_state.result = json.loads(text)
-            except Exception as e:
-                st.error(f"Error analyzing image: {e}")
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=[prompt, st.session_state.image]
+            )
+            text = response.text.replace("```json", "").replace("```", "").strip()
+            st.session_state.result = json.loads(text)
+            bar.progress(100, text=t("Done! ✅", "រួចរាល់! ✅"))
+            time.sleep(0.3)
+            bar.empty()
+        except Exception as e:
+            bar.empty()
+            st.error(f"Error analyzing image: {e}")
 
 # ── Display results ──
 if st.session_state.result is not None and st.session_state.image is not None:
     data = st.session_state.result
     lang = st.session_state.lang
 
-    food = data.get("food_km" if lang == "km" else "food_en", "Unknown")
-    calories = str(data.get("calories", "?"))
-    nutrition = data.get("nutrition", {})
-    ignore = ["bun", "bread", "beef patty"]
-    ingredients_key = "ingredients_km" if lang == "km" else "ingredients_en"
-    ingredients = [i for i in data.get(ingredients_key, []) if i.lower() not in ignore]
+    food        = data.get("food_km" if lang == "km" else "food_en", "Unknown")
+    calories    = str(data.get("calories", "?"))
+    nutrition   = data.get("nutrition", {})
+    ignore      = ["bun", "bread", "beef patty"]
+    ing_key     = "ingredients_km" if lang == "km" else "ingredients_en"
+    ingredients = [i for i in data.get(ing_key, []) if i.lower() not in ignore]
 
     st.markdown(f"""
     <div class="glass-card">
